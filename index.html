@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hành Trình Tỉ Số - Từ Bến Xe Buýt Đến Trạng Nguyên Nhí</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            sky: '#E0F7FA',
+                            blue: '#00BCD4',
+                            orange: '#FF9800',
+                            orangeDark: '#F57C00',
+                            green: '#4CAF50',
+                            red: '#F44336'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Nunito', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #E0F7FA;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Input styling */
+        .fraction-input {
+            width: 40px;
+            height: 36px;
+            text-align: center;
+            border: 2px solid #9ca3af;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1.125rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .fraction-input:focus { border-color: #00BCD4; box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.2); }
+        .fraction-input.correct { border-color: #4CAF50; background-color: #f0fdf4; color: #166534; pointer-events: none; }
+        .fraction-input.incorrect { border-color: #F44336; background-color: #fef2f2; animation: shake 0.4s ease-in-out; }
+
+        /* Fraction Display */
+        .fraction-display {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 0.25rem;
+            font-weight: 700;
+        }
+        .fraction-display .num { border-bottom: 2px solid currentColor; padding: 0 0.25rem; }
+        .fraction-display .den { padding: 0 0.25rem; }
+
+        /* Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        .shake { animation: shake 0.4s ease-in-out; }
+
+        @keyframes driveIn {
+            0% { transform: translateX(-150vw); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        .bus-drive { animation: driveIn 1.2s ease-out forwards; }
+
+        @keyframes fly {
+            0%, 100% { transform: translate(0, 0) rotate(-5deg); }
+            33% { transform: translate(15px, -15px) rotate(5deg); }
+            66% { transform: translate(-10px, 10px) rotate(-2deg); }
+        }
+        .bee-fly {
+            animation: fly 3s infinite ease-in-out alternate;
+            cursor: pointer;
+            touch-action: none;
+            z-index: 10;
+        }
+
+        /* 3D Flip Cards */
+        .perspective-1000 { perspective: 1000px; }
+        .flip-card-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+
+        /* Grid */
+        .grid-100 {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+            width: 100%;
+            max-width: 300px;
+            aspect-ratio: 1;
+            margin: 0 auto;
+            background: #cbd5e1;
+            padding: 4px;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .grid-cell {
+            background-color: white;
+            border-radius: 2px;
+            transition: background-color 0.4s ease;
+        }
+
+        /* Drag and Drop Zones */
+        .drag-item {
+            width: 50px; height: 50px;
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            color: white; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: bold; font-family: 'Nunito';
+            cursor: grab; user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            touch-action: none; z-index: 20;
+        }
+        .drag-item:active { cursor: grabbing; transform: scale(1.05); }
+        .drop-zone {
+            width: 56px; height: 56px;
+            border: 3px dashed #00BCD4; border-radius: 10px;
+            background: rgba(255,255,255,0.7);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .drop-zone.hovered { background: #E0F7FA; border-color: #FF9800; transform: scale(1.05); }
+        .drop-zone.filled { border: 3px solid #4CAF50; background: #f0fdf4; }
+        
+        .flower-matched { transform: scale(1.15); filter: drop-shadow(0 0 12px #FFEB3B); transition: all 0.3s; }
+
+        /* Quiz Timer Bar */
+        #quiz-timer-bar { transition: width 1s linear; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #00BCD4; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #008ba3; }
+        
+        .phase-container { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .phase-container.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="flex flex-col h-screen text-slate-800">
+
+    <!-- Custom Modal (No alerts allowed) -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform scale-90 transition-transform duration-300 flex flex-col items-center text-center" id="modal-content">
+            <div class="flex items-center justify-center gap-3 mb-4 w-full">
+                <div id="modal-icon" class="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0"></div>
+                <h3 id="modal-title" class="text-xl font-bold font-display text-slate-800"></h3>
+            </div>
+            <p id="modal-message" class="text-slate-600 mb-6 font-medium text-sm md:text-base"></p>
+            <button onclick="closeModal()" class="w-full bg-theme-blue text-white py-3 rounded-xl font-bold hover:bg-cyan-600 transition-colors shadow-md">Đã hiểu</button>
+        </div>
+    </div>
+
+    <!-- Warmup Modal -->
+    <div id="warmup-modal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-90 transition-transform duration-300 flex flex-col" id="warmup-modal-content">
+            <div class="bg-theme-blue p-5 text-white text-center relative">
+                <h3 id="warmup-question" class="text-xl font-bold font-display leading-snug"></h3>
+            </div>
+            <div class="p-6 space-y-3" id="warmup-options">
+                <!-- JS injected buttons -->
+            </div>
+            <div id="warmup-explanation" class="hidden px-6 pb-4 text-center font-medium text-sm">
+            </div>
+            <div id="warmup-close-btn" class="hidden px-6 pb-6">
+                <button onclick="closeWarmupModal()" class="w-full bg-theme-orange text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition-colors shadow-md">Tuyệt vời! Lật thẻ thôi</button>
+            </div>
+        </div>
+    </div>
+
+    <header class="bg-white shadow-md z-40 relative">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-theme-orange rounded-full flex items-center justify-center shadow-inner">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                </div>
+                <h1 class="text-lg md:text-xl font-display font-bold text-theme-blue hidden sm:block">Hành Trình Tỉ Số</h1>
+            </div>
+            
+            <!-- Progress Tracker -->
+            <div class="flex gap-2 md:gap-4 items-center">
+                <div class="nav-step flex items-center justify-center w-8 h-8 rounded-full font-bold bg-theme-blue text-white shadow" data-step="1">1</div>
+                <div class="w-2 md:w-4 h-1 bg-slate-200 rounded"></div>
+                <div class="nav-step flex items-center justify-center w-8 h-8 rounded-full font-bold bg-slate-200 text-slate-500" data-step="2">2</div>
+                <div class="w-2 md:w-4 h-1 bg-slate-200 rounded"></div>
+                <div class="nav-step flex items-center justify-center w-8 h-8 rounded-full font-bold bg-slate-200 text-slate-500" data-step="3">3</div>
+                <div class="w-2 md:w-4 h-1 bg-slate-200 rounded"></div>
+                <div class="nav-step flex items-center justify-center w-8 h-8 rounded-full font-bold bg-slate-200 text-slate-500" data-step="4">4</div>
+                <div class="w-2 md:w-4 h-1 bg-slate-200 rounded"></div>
+                <div class="nav-step flex items-center justify-center w-8 h-8 rounded-full font-bold bg-slate-200 text-slate-500" data-step="5">🏆</div>
+            </div>
+
+            <!-- Score Display -->
+            <div class="flex items-center gap-2 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-300">
+                <span class="text-xl">⭐</span>
+                <span id="score-display" class="font-bold text-amber-700 text-lg">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow relative overflow-y-auto overflow-x-hidden p-4 md:p-8">
+        <div class="max-w-5xl mx-auto h-full flex flex-col">
+
+            <!-- PHASE 1: Khởi Động -->
+            <section id="phase-1" class="phase-container active flex-col h-full gap-6">
+                <!-- GIỚI THIỆU LÝ THUYẾT (Thêm mới) -->
+                <div class='bg-white rounded-2xl p-5 shadow-sm border-l-4 border-theme-orange mb-2 flex items-center gap-4'>
+                    <div class='text-4xl animate-bounce drop-shadow'>🤖</div>
+                    <div>
+                        <h3 class='text-lg md:text-xl font-bold font-display text-theme-blue mb-1'>Chào mừng bạn đến với Hành Trình Tỉ Số!</h3>
+                        <p class='text-slate-700 text-sm md:text-base'>Trong cuộc sống, chúng ta thường cần so sánh số lượng hai đại lượng với nhau (ví dụ: số bạn nam và số bạn nữ). Hôm nay, chúng mình sẽ cùng khám phá một công cụ toán học mang tên <b>'Tỉ số'</b> để làm việc này cực nhanh nhé!</p>
+                        <div class="mt-3 bg-blue-50 border border-blue-100 p-3 rounded-xl">
+                            <p class="text-sm text-theme-blue font-bold mb-1">💡 Bật mí nhỏ trước khi chơi:</p>
+                            <ul class="text-sm text-slate-700 list-disc list-inside space-y-1">
+                                <li>Thương của phép chia <b class="text-theme-orange">a : b</b> có thể viết thành phân số <b>a/b</b>.</li>
+                                <li><b>Phân số thập phân</b> là các phân số có mẫu số (ở dưới) là <b>10, 100, 1000...</b> đó nha!</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-2">
+                    <h2 class="text-3xl font-display font-extrabold text-theme-blue mb-2">Bước 1: Khởi động & Nhìn</h2>
+                    <p class="text-slate-600 font-medium">Lật các thẻ để ôn tập kiến thức trước khi xe buýt tới nhé!</p>
+                </div>
+
+                <!-- 3D Flip Cards Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <!-- Card 1 -->
+                    <div class="flip-card perspective-1000 h-32 md:h-40 cursor-pointer" onclick="openWarmupModal(1, this)">
+                        <div class="flip-card-inner relative w-full h-full shadow-lg rounded-xl">
+                            <div class="absolute w-full h-full backface-hidden bg-white border-b-4 border-theme-blue rounded-xl flex items-center justify-center p-2 text-center hover:bg-slate-50 transition-colors">
+                                <span class="font-bold text-slate-700 text-sm md:text-base">Thương của<br><span class="text-xl text-theme-orange">5 : 9</span><br>là gì?</span>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-theme-blue rounded-xl flex items-center justify-center text-white p-2">
+                                <span class="text-3xl font-bold border-b-2 border-white pb-1 flex flex-col items-center">
+                                    <span class="text-2xl border-b-2 border-white px-2">5</span>
+                                    <span class="text-2xl px-2">9</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="flip-card perspective-1000 h-32 md:h-40 cursor-pointer" onclick="openWarmupModal(2, this)">
+                        <div class="flip-card-inner relative w-full h-full shadow-lg rounded-xl">
+                            <div class="absolute w-full h-full backface-hidden bg-white border-b-4 border-theme-green rounded-xl flex items-center justify-center p-2 text-center hover:bg-slate-50 transition-colors">
+                                <span class="font-bold text-slate-700 text-sm md:text-base">Đâu là phân số thập phân?</span>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-theme-green rounded-xl flex items-center justify-center text-white p-2">
+                                <span class="text-3xl font-bold border-b-2 border-white pb-1 flex flex-col items-center">
+                                    <span class="text-2xl border-b-2 border-white px-2">89</span>
+                                    <span class="text-2xl px-2">100</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="flip-card perspective-1000 h-32 md:h-40 cursor-pointer" onclick="openWarmupModal(3, this)">
+                        <div class="flip-card-inner relative w-full h-full shadow-lg rounded-xl">
+                            <div class="absolute w-full h-full backface-hidden bg-white border-b-4 border-purple-400 rounded-xl flex items-center justify-center p-2 text-center hover:bg-slate-50 transition-colors">
+                                <span class="font-bold text-slate-700 text-sm md:text-base">Phân số thập phân nào?</span>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-purple-500 rounded-xl flex items-center justify-center text-white p-2">
+                                <span class="text-3xl font-bold border-b-2 border-white pb-1 flex flex-col items-center">
+                                    <span class="text-2xl border-b-2 border-white px-2">45</span>
+                                    <span class="text-2xl px-2">10</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 4 -->
+                    <div class="flip-card perspective-1000 h-32 md:h-40 cursor-pointer" onclick="openWarmupModal(4, this)">
+                        <div class="flip-card-inner relative w-full h-full shadow-lg rounded-xl">
+                            <div class="absolute w-full h-full backface-hidden bg-white border-b-4 border-pink-400 rounded-xl flex items-center justify-center p-2 text-center hover:bg-slate-50 transition-colors">
+                                <span class="font-bold text-slate-700 text-sm md:text-base">Đổi thành số thập phân:<br><span class="text-xl">48/100</span></span>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-pink-500 rounded-xl flex items-center justify-center text-white">
+                                <span class="text-4xl font-bold">0,48</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bus Station Animation Scene -->
+                <div id="bus-scene-wrapper" class="relative bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-slate-100 flex-grow min-h-[250px] flex flex-col justify-end pb-4 transition-all duration-500">
+                    <!-- Sky & Decor -->
+                    <div class="absolute inset-0 bg-gradient-to-b from-blue-100 to-white z-0"></div>
+                    <div class="absolute top-4 right-10 w-16 h-8 bg-white rounded-full opacity-80 blur-[2px]"></div>
+                    <div class="absolute top-8 left-20 w-24 h-10 bg-white rounded-full opacity-60 blur-[2px]"></div>
+                    
+                    <!-- Robot SVG -->
+                    <div id="robot-1" class="absolute bottom-2 right-4 md:right-10 w-20 h-28 md:w-24 md:h-32 z-20 transform transition-transform duration-500">
+                        <svg viewBox="0 0 100 120" class="w-full h-full drop-shadow-md">
+                            <rect x="30" y="30" width="40" height="35" rx="8" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
+                            <line x1="50" y1="30" x2="50" y2="10" stroke="#64748b" stroke-width="3"/>
+                            <circle cx="50" cy="10" r="5" fill="#ef4444" class="animate-pulse"/>
+                            <circle cx="40" cy="45" r="4" fill="#0ea5e9"/>
+                            <circle cx="60" cy="45" r="4" fill="#0ea5e9"/>
+                            <path d="M 40 55 Q 50 60 60 55" fill="none" stroke="#64748b" stroke-width="2"/>
+                            <rect x="25" y="65" width="50" height="40" rx="10" fill="#cbd5e1" stroke="#64748b" stroke-width="2"/>
+                            <!-- Waving Arm -->
+                            <path id="robot-arm" d="M 25 75 Q 5 60 15 40" fill="none" stroke="#94a3b8" stroke-width="8" stroke-linecap="round"/>
+                        </svg>
+                        <!-- Chat Bubble -->
+                        <div id="chat-1" class="absolute bottom-full mb-2 left-1/2 transform -translate-x-[80%] md:-translate-x-0 md:-left-32 bg-white p-3 rounded-2xl shadow-lg border-2 border-theme-blue text-xs md:text-sm w-44 md:w-48 opacity-0 transition-opacity duration-500 z-30">
+                            Trong bến có 7 ô tô. Đố bạn có bao nhiêu ô tô <b>điện (xanh)</b> và <b>xăng (đỏ)</b>?
+                            <div class="absolute -bottom-2 right-6 md:right-10 w-4 h-4 bg-white border-b-2 border-r-2 border-theme-blue transform rotate-45"></div>
+                        </div>
+                    </div>
+
+                    <!-- Road -->
+                    <div class="absolute bottom-0 left-0 w-full h-12 bg-slate-300 z-0">
+                        <div class="w-full h-1 border-t-2 border-dashed border-white mt-5"></div>
+                    </div>
+
+                    <!-- Cars Container -->
+                    <div id="cars-container" class="flex justify-start gap-1 md:gap-3 px-4 z-10 w-[80%] overflow-visible">
+                        <!-- SVGs injected via JS -->
+                    </div>
+                </div>
+
+                <div class="text-center mt-2">
+                    <button id="btn-next-1" onclick="nextPhase(2)" class="hidden bg-theme-orange text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-orange-600 transition-transform hover:scale-105">Khám phá quy luật Tỉ số</button>
+                </div>
+            </section>
+
+            <!-- PHASE 2: Tương tác Khám phá -->
+            <section id="phase-2" class="phase-container flex-col h-full gap-6">
+                
+                <!-- Tab Navigation inside Phase 2 -->
+                <div class="flex bg-white rounded-xl shadow-sm border p-1 self-center w-full max-w-md mb-2">
+                    <button id="tab-2a" class="flex-1 py-2 font-bold rounded-lg bg-theme-sky text-theme-blue transition-colors">Tỉ số</button>
+                    <button id="tab-2b" class="flex-1 py-2 font-bold rounded-lg text-slate-500 hover:bg-slate-50 transition-colors pointer-events-none opacity-50">Tỉ số Phần trăm</button>
+                </div>
+
+                <!-- Phase 2A: Ratios Base -->
+                <div id="content-2a" class="flex flex-col gap-6 animate-fadeIn">
+                    <div class="bg-white p-6 rounded-2xl shadow-md border-t-4 border-theme-blue">
+                        <h3 class="text-xl font-bold mb-4 font-display">1. Quan sát và điền số lượng:</h3>
+                        <div class="flex flex-col md:flex-row gap-4 items-center justify-around">
+                            <div class="flex items-center gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100 w-full md:w-auto">
+                                <div class="w-8 h-8 rounded bg-theme-blue flex items-center justify-center text-white text-xl">⚡</div>
+                                <span class="font-medium">Có</span>
+                                <input type="number" id="input-elec" class="fraction-input" min="0" max="10">
+                                <span class="font-medium">ô tô điện.</span>
+                            </div>
+                            <div class="flex items-center gap-3 bg-red-50 p-3 rounded-xl border border-red-100 w-full md:w-auto">
+                                <div class="w-8 h-8 rounded bg-red-500 flex items-center justify-center text-white text-xl">⛽</div>
+                                <span class="font-medium">Có</span>
+                                <input type="number" id="input-gas" class="fraction-input" min="0" max="10">
+                                <span class="font-medium">ô tô xăng.</span>
+                            </div>
+                        </div>
+                        <div class="text-center mt-4">
+                            <button onclick="checkBusCount()" class="bg-theme-blue text-white px-6 py-2 rounded-lg font-bold shadow hover:bg-cyan-600">Kiểm tra</button>
+                        </div>
+                    </div>
+
+                    <div id="drag-drop-section" class="bg-white p-6 rounded-2xl shadow-md border-t-4 border-theme-orange hidden flex-col items-center text-center">
+                        <h3 class="text-xl font-bold mb-2 font-display">2. Kéo thả để lập tỉ số:</h3>
+                        <p class="text-slate-600 mb-6">Kéo các số vào đúng vị trí để tạo phân số.</p>
+                        
+                        <!-- Draggables -->
+                        <div class="flex flex-wrap justify-center gap-3 md:gap-4 mb-8 bg-orange-50 p-4 rounded-xl border border-orange-100 w-full" id="drag-items-container">
+                            <div class="drag-item shrink-0" draggable="true" id="block-3a" data-val="3">3</div>
+                            <div class="drag-item shrink-0" draggable="true" id="block-4" data-val="4">4</div>
+                            <div class="drag-item shrink-0" draggable="true" id="block-7" data-val="7">7</div>
+                            <div class="drag-item shrink-0" draggable="true" id="block-3b" data-val="3">3</div>
+                            <div class="drag-item shrink-0" draggable="true" id="block-5" data-val="5">5</div>
+                        </div>
+
+                        <!-- Drop Targets -->
+                        <div class="flex flex-col md:flex-row gap-8 w-full justify-around">
+                            <!-- Target 1 -->
+                            <div class="flex flex-col items-center bg-slate-50 p-4 rounded-xl w-full">
+                                <p class="font-semibold text-sm mb-3">Tỉ số ô tô <span class="text-theme-blue">điện</span> so với <span class="text-slate-800">tổng số xe</span></p>
+                                <div class="flex flex-col items-center">
+                                    <div class="drop-zone mb-2 relative" id="drop-1-num" data-expected="3"></div>
+                                    <div class="w-20 h-1 bg-slate-800 rounded"></div>
+                                    <div class="drop-zone mt-2 relative" id="drop-1-den" data-expected="7"></div>
+                                </div>
+                            </div>
+                            <!-- Target 2 -->
+                            <div class="flex flex-col items-center bg-slate-50 p-4 rounded-xl w-full">
+                                <p class="font-semibold text-sm mb-3">Tỉ số ô tô <span class="text-theme-blue">điện</span> so với ô tô <span class="text-red-500">xăng</span></p>
+                                <div class="flex flex-col items-center">
+                                    <div class="drop-zone mb-2 relative" id="drop-2-num" data-expected="3"></div>
+                                    <div class="w-20 h-1 bg-slate-800 rounded"></div>
+                                    <div class="drop-zone mt-2 relative" id="drop-2-den" data-expected="4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 2B: Percentage Base -->
+                <div id="content-2b" class="hidden flex-col gap-4">
+                    <div class="text-center max-w-2xl mx-auto mb-2">
+                        <h3 class="text-2xl font-bold font-display text-theme-blue">Khảo sát 100 bạn học sinh</h3>
+                        <p class="text-slate-600">Rô-bốt hỏi 100 bạn về môn thể thao yêu thích. Hãy xem kết quả trên lưới 100 ô!</p>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-8 bg-white p-6 rounded-2xl shadow-md border-2 border-slate-100">
+                        <!-- Buttons -->
+                        <div class="flex flex-col gap-4 w-full md:w-48">
+                            <button onclick="fillGrid('boi', 43, '#0ea5e9')" class="sport-btn bg-white border-2 border-[#0ea5e9] text-[#0ea5e9] py-3 rounded-xl font-bold hover:bg-[#0ea5e9] hover:text-white transition-colors relative overflow-hidden group">
+                                <span class="relative z-10">🏊 Bơi (43 bạn)</span>
+                            </button>
+                            <button onclick="fillGrid('covua', 31, '#eab308')" class="sport-btn bg-white border-2 border-[#eab308] text-[#eab308] py-3 rounded-xl font-bold hover:bg-[#eab308] hover:text-white transition-colors relative overflow-hidden group">
+                                <span class="relative z-10">♟️ Cờ vua (31 bạn)</span>
+                            </button>
+                            <button onclick="fillGrid('caulong', 26, '#22c55e')" class="sport-btn bg-white border-2 border-[#22c55e] text-[#22c55e] py-3 rounded-xl font-bold hover:bg-[#22c55e] hover:text-white transition-colors relative overflow-hidden group">
+                                <span class="relative z-10">🏸 Cầu lông (26 bạn)</span>
+                            </button>
+                        </div>
+
+                        <!-- Grid -->
+                        <div class="flex-shrink-0">
+                            <div class="grid-100" id="hundred-grid">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Result Display -->
+                        <div class="flex flex-col items-center bg-slate-50 p-6 rounded-xl w-full md:w-64 h-full min-h-[200px] justify-center border border-slate-200">
+                            <p class="text-slate-500 font-medium mb-2">Tỉ số biểu diễn:</p>
+                            <div class="text-5xl font-bold text-slate-300 transition-colors duration-500" id="grid-fraction">
+                                <span class="flex flex-col items-center">
+                                    <span class="border-b-4 border-current pb-1 px-4" id="grid-num">?</span>
+                                    <span class="pt-1 px-4">100</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button id="btn-next-2" onclick="nextPhase(3)" class="hidden bg-theme-green text-white px-10 py-4 rounded-full font-bold shadow-xl hover:bg-green-600 transition-transform hover:scale-105 text-lg">Khám phá Bí Kíp Rô-bốt</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PHASE 3: Nhớ (Chốt kiến thức) -->
+            <section id="phase-3" class="phase-container flex-col items-center justify-center h-full">
+                <div class="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-theme-blue transform transition-all duration-700 translate-y-10 opacity-0" id="knowledge-board">
+                    <!-- Header -->
+                    <div class="bg-theme-blue p-6 text-center relative">
+                        <h2 class="text-3xl font-display font-black text-white drop-shadow-md">Bí Kíp Của Rô-Bốt 🤖</h2>
+                        <div class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-theme-blue rotate-45"></div>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="p-8 md:p-12 space-y-8 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNlMmU4ZjAiLz48L3N2Zz4=')]">
+                        
+                        <!-- Def 1 -->
+                        <div class="bg-white/90 p-4 rounded-xl shadow-sm border-l-4 border-theme-orange">
+                            <p class="text-lg text-slate-700 font-medium leading-relaxed">
+                                <span class="bg-theme-orange text-white px-2 py-1 rounded text-sm font-bold mr-2">1</span>
+                                Tỉ số của <span class="font-bold text-theme-blue">a</span> và <span class="font-bold text-theme-blue">b</span> là <span class="font-bold text-lg text-theme-blue">a : b</span> hay <span class="fraction-display text-theme-blue text-xl"><span class="num">a</span><span class="den">b</span></span> (với b khác 0).
+                            </p>
+                        </div>
+
+                        <!-- Def 2 & Morph Animation -->
+                        <div class="bg-sky-50/90 p-6 rounded-xl shadow-inner border border-sky-100 flex flex-col items-center text-center mt-6">
+                            <p class="text-lg text-slate-700 font-medium mb-6">
+                                <span class="bg-theme-blue text-white px-2 py-1 rounded text-sm font-bold mr-2">2</span>
+                                Các tỉ số có mẫu số là <span class="font-bold text-red-500">100</span> được gọi là <b class="text-theme-blue">tỉ số phần trăm</b>.
+                            </p>
+                            
+                            <div class="flex items-center gap-8 justify-center w-full">
+                                <!-- Fraction -->
+                                <div class="text-5xl font-bold text-slate-800 flex flex-col items-center">
+                                    <span class="border-b-4 border-slate-800 pb-1 px-2 text-theme-blue">43</span>
+                                    <span class="pt-1 px-2 text-red-500 relative" id="morph-100">
+                                        100
+                                        <!-- Arrow -->
+                                        <svg class="absolute -right-12 top-1/2 transform -translate-y-1/2 w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                    </span>
+                                </div>
+                                
+                                <!-- Percentage -->
+                                <div class="text-6xl font-bold font-display text-theme-blue flex items-center">
+                                    43<span class="text-red-500 scale-0 transition-transform duration-700 ml-1 origin-left drop-shadow-md" id="morph-percent">%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-8 bg-white py-2 px-6 rounded-full shadow text-slate-600 font-semibold text-lg italic opacity-0 transition-opacity duration-1000" id="read-aloud">
+                                Đọc là: Bốn mươi ba phần trăm
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-next-3" onclick="nextPhase(4)" class="hidden mt-8 bg-theme-orange text-white px-10 py-4 rounded-full font-bold shadow-xl hover:bg-orange-600 transition-transform hover:scale-105 text-lg">Vào phần Thực Hành</button>
+            </section>
+
+            <!-- PHASE 4: Thực Hành -->
+            <section id="phase-4" class="phase-container flex-col h-full gap-8">
+                
+                <!-- Bài 1: Điền bảng -->
+                <div class="bg-white rounded-2xl shadow-md p-6 md:p-8 border-t-4 border-theme-blue w-full max-w-4xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-bold font-display text-slate-800">Bài 1: Hoàn thành bảng tỉ số</h3>
+                        <span class="bg-blue-100 text-theme-blue px-3 py-1 rounded-full text-sm font-bold">Điểm: <span id="p4-b1-score">0</span>/4</span>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-center border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600">
+                                    <th class="p-3 border rounded-tl-xl w-1/3">Số thứ nhất</th>
+                                    <th class="p-3 border w-1/3">Số thứ hai</th>
+                                    <th class="p-3 border rounded-tr-xl w-1/3">Tỉ số của số thứ 1 và số thứ 2</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Row 1 -->
+                                <tr class="border-b hover:bg-slate-50 transition-colors">
+                                    <td class="p-4 font-bold text-xl text-theme-blue">3</td>
+                                    <td class="p-4 font-bold text-xl text-theme-orange">11</td>
+                                    <td class="p-4">
+                                        <div class="flex flex-col items-center justify-center w-16 mx-auto">
+                                            <input type="number" class="fraction-input table-input mb-1 border-theme-blue text-theme-blue" data-row="1" data-pos="num" data-ans="3">
+                                            <div class="w-full h-0.5 bg-slate-400"></div>
+                                            <input type="number" class="fraction-input table-input mt-1 border-theme-orange text-theme-orange" data-row="1" data-pos="den" data-ans="11">
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Row 2 -->
+                                <tr class="border-b hover:bg-slate-50 transition-colors">
+                                    <td class="p-4 font-bold text-xl text-theme-blue">13</td>
+                                    <td class="p-4 font-bold text-xl text-theme-orange">17</td>
+                                    <td class="p-4">
+                                        <div class="flex flex-col items-center justify-center w-16 mx-auto">
+                                            <input type="number" class="fraction-input table-input mb-1 border-theme-blue text-theme-blue" data-row="2" data-pos="num" data-ans="13">
+                                            <div class="w-full h-0.5 bg-slate-400"></div>
+                                            <input type="number" class="fraction-input table-input mt-1 border-theme-orange text-theme-orange" data-row="2" data-pos="den" data-ans="17">
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Row 3 -->
+                                <tr class="border-b hover:bg-slate-50 transition-colors">
+                                    <td class="p-4 font-bold text-xl text-theme-blue">17</td>
+                                    <td class="p-4 font-bold text-xl text-theme-orange">13</td>
+                                    <td class="p-4">
+                                        <div class="flex flex-col items-center justify-center w-16 mx-auto">
+                                            <input type="number" class="fraction-input table-input mb-1 border-theme-blue text-theme-blue" data-row="3" data-pos="num" data-ans="17">
+                                            <div class="w-full h-0.5 bg-slate-400"></div>
+                                            <input type="number" class="fraction-input table-input mt-1 border-theme-orange text-theme-orange" data-row="3" data-pos="den" data-ans="13">
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Row 4 (Variables) -->
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-4 font-bold text-xl text-theme-blue italic">m</td>
+                                    <td class="p-4 font-bold text-xl text-theme-orange italic">n <span class="text-xs text-slate-400 not-italic">(khác 0)</span></td>
+                                    <td class="p-4">
+                                        <div class="flex flex-col items-center justify-center w-16 mx-auto">
+                                            <input type="text" class="fraction-input table-input mb-1 border-theme-blue text-theme-blue !font-serif italic" data-row="4" data-pos="num" data-ans="m">
+                                            <div class="w-full h-0.5 bg-slate-400"></div>
+                                            <input type="text" class="fraction-input table-input mt-1 border-theme-orange text-theme-orange !font-serif italic" data-row="4" data-pos="den" data-ans="n">
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Bài 2: Trạng Nguyên Nhí -->
+                <div class="bg-white rounded-2xl shadow-md p-6 md:p-8 border-t-4 border-pink-400 w-full max-w-4xl mx-auto relative opacity-50 pointer-events-none transition-opacity duration-500" id="bai-2-container">
+                    
+                    <!-- Overlay lock -->
+                    <div id="bai-2-lock" class="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center rounded-2xl">
+                        <div class="bg-slate-800 text-white px-4 py-2 rounded-full font-medium text-sm flex items-center gap-2">
+                            <span>🔒 Hoàn thành Bài 1 trước</span>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-bold font-display text-slate-800 mb-6">Bài 2: Trạng Nguyên Nhí</h3>
+                    
+                    <div class="flex flex-col md:flex-row gap-8 items-center">
+                        <!-- Illustration -->
+                        <div class="w-full md:w-1/3 flex flex-col gap-4 items-center bg-pink-50 p-4 rounded-xl border border-pink-100">
+                            <!-- SVGs generation -->
+                            <div class="flex gap-4 items-end">
+                                <!-- Girl -->
+                                <div class="flex flex-col items-center">
+                                    <svg viewBox="0 0 100 120" class="w-20 h-24 drop-shadow">
+                                        <!-- Hat -->
+                                        <path d="M 10 40 L 50 10 L 90 40 L 80 40 L 80 50 L 20 50 L 20 40 Z" fill="#d81b60"/>
+                                        <circle cx="50" cy="10" r="5" fill="#facc15"/>
+                                        <circle cx="20" cy="50" r="3" fill="#facc15"/>
+                                        <circle cx="80" cy="50" r="3" fill="#facc15"/>
+                                        <!-- Face -->
+                                        <circle cx="50" cy="65" r="20" fill="#fde047"/>
+                                        <circle cx="43" cy="62" r="2" fill="#000"/>
+                                        <circle cx="57" cy="62" r="2" fill="#000"/>
+                                        <path d="M 45 72 Q 50 77 55 72" fill="none" stroke="#000" stroke-width="1.5"/>
+                                        <!-- Hair -->
+                                        <path d="M 30 65 Q 20 90 25 110" fill="none" stroke="#000" stroke-width="4"/>
+                                        <path d="M 70 65 Q 80 90 75 110" fill="none" stroke="#000" stroke-width="4"/>
+                                        <!-- Body -->
+                                        <path d="M 30 85 L 70 85 L 80 120 L 20 120 Z" fill="#ec4899"/>
+                                    </svg>
+                                    <span class="font-bold text-pink-600 mt-2">23 Nữ</span>
+                                </div>
+                                <!-- Boy -->
+                                <div class="flex flex-col items-center">
+                                    <svg viewBox="0 0 100 120" class="w-20 h-24 drop-shadow">
+                                        <!-- Hat -->
+                                        <path d="M 10 40 L 50 10 L 90 40 L 80 40 L 80 50 L 20 50 L 20 40 Z" fill="#2563eb"/>
+                                        <circle cx="50" cy="10" r="5" fill="#facc15"/>
+                                        <!-- Face -->
+                                        <circle cx="50" cy="65" r="20" fill="#fde047"/>
+                                        <circle cx="43" cy="62" r="2" fill="#000"/>
+                                        <circle cx="57" cy="62" r="2" fill="#000"/>
+                                        <path d="M 45 72 Q 50 77 55 72" fill="none" stroke="#000" stroke-width="1.5"/>
+                                        <!-- Body -->
+                                        <path d="M 30 85 L 70 85 L 80 120 L 20 120 Z" fill="#3b82f6"/>
+                                    </svg>
+                                    <span class="font-bold text-blue-600 mt-2">17 Nam</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Questions -->
+                        <div class="w-full md:w-2/3 space-y-4">
+                            <!-- Q1 -->
+                            <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border">
+                                <span class="font-medium text-slate-700">Tổng số bạn tham gia: 23 + 17 = </span>
+                                <input type="number" id="tn-total" class="w-16 h-10 text-center border-2 border-slate-300 rounded font-bold text-lg outline-none focus:border-theme-blue transition-colors">
+                            </div>
+                            <!-- Q2 -->
+                            <div class="flex flex-col gap-2 p-3 bg-white border-l-4 border-pink-500 rounded shadow-sm opacity-50 pointer-events-none transition-opacity" id="tn-q2-group">
+                                <p class="font-medium text-slate-700">Tỉ số của số bạn <b>nữ</b> và số bạn <b>nam</b> là:</p>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="tn-n-num" class="fraction-input !w-12 !h-10 border-pink-400 text-pink-600">
+                                    <span class="text-2xl font-light text-slate-400">/</span>
+                                    <input type="number" id="tn-n-den" class="fraction-input !w-12 !h-10 border-blue-400 text-blue-600">
+                                </div>
+                            </div>
+                            <!-- Q3 -->
+                            <div class="flex flex-col gap-2 p-3 bg-white border-l-4 border-blue-500 rounded shadow-sm opacity-50 pointer-events-none transition-opacity" id="tn-q3-group">
+                                <p class="font-medium text-slate-700">Tỉ số của số bạn <b>nam</b> và số bạn <b>nữ</b> là:</p>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="tn-m-num" class="fraction-input !w-12 !h-10 border-blue-400 text-blue-600">
+                                    <span class="text-2xl font-light text-slate-400">/</span>
+                                    <input type="number" id="tn-m-den" class="fraction-input !w-12 !h-10 border-pink-400 text-pink-600">
+                                </div>
+                            </div>
+                            <!-- Q4 -->
+                            <div class="flex flex-col gap-2 p-3 bg-white border-l-4 border-theme-orange rounded shadow-sm opacity-50 pointer-events-none transition-opacity" id="tn-q4-group">
+                                <p class="font-medium text-slate-700">Tỉ số của số bạn <b>nữ</b> và <b>tổng số bạn</b> tham gia là:</p>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="tn-t-num" class="fraction-input !w-12 !h-10 border-pink-400 text-pink-600">
+                                    <span class="text-2xl font-light text-slate-400">/</span>
+                                    <input type="number" id="tn-t-den" class="fraction-input !w-12 !h-10 border-theme-orange text-theme-orange">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center pb-8 mt-4">
+                    <button id="btn-next-4" onclick="nextPhase(5)" class="hidden bg-red-500 text-white px-10 py-4 rounded-full font-bold shadow-xl hover:bg-red-600 transition-transform hover:scale-105 text-lg uppercase tracking-wider">Thử Thách Cuối Cùng 🚀</button>
+                </div>
+            </section>
+
+            <!-- PHASE 5: Thử Thách Cấp Độ Cao -->
+            <section id="phase-5" class="phase-container flex-col h-full gap-6">
+                
+                <!-- Game 1: Ong tìm hoa -->
+                <div id="game-1-container" class="bg-gradient-to-b from-sky-100 to-green-100 rounded-3xl p-6 shadow-lg border-2 border-green-200 min-h-[400px] relative overflow-hidden flex flex-col">
+                    <div class="text-center z-10 bg-white/80 p-3 rounded-xl shadow-sm backdrop-blur-sm mx-auto mb-4 inline-block">
+                        <h3 class="text-xl font-bold font-display text-theme-orange mb-1">Trò chơi 1: Ong Tìm Hoa 🐝</h3>
+                        <p class="text-slate-700 text-sm font-medium">Kéo thả Ong mang Tỉ số % vào Hoa mang Phân số tương ứng!</p>
+                    </div>
+
+                    <div class="flex-grow relative w-full h-full" id="game-area">
+                        <!-- Bees & Flowers Wrapper -->
+                        <div class="absolute inset-0 flex flex-col justify-between pt-4 pb-12">
+                            <!-- Bees -->
+                            <div class="flex justify-around items-start h-1/2 w-full px-4" id="bees-container">
+                                <!-- JS Injected -->
+                            </div>
+                            <!-- Flowers -->
+                            <div class="flex justify-around items-end h-1/2 w-full px-4" id="flowers-container">
+                                <!-- JS Injected -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game 2: Ai nhanh ai đúng (Quiz Show) -->
+                <div id="game-2-container" class="hidden flex-col items-center bg-slate-900 rounded-3xl p-6 shadow-2xl relative overflow-hidden h-[500px] justify-center">
+                    
+                    <!-- Background Design -->
+                    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900 via-slate-900 to-black z-0"></div>
+                    <!-- Neon accents -->
+                    <div class="absolute top-0 left-1/4 w-1/2 h-2 bg-theme-blue shadow-[0_0_20px_#00BCD4]"></div>
+                    <div class="absolute bottom-0 left-1/4 w-1/2 h-2 bg-pink-500 shadow-[0_0_20px_#EC4899]"></div>
+
+                    <div class="relative z-10 w-full max-w-2xl flex flex-col h-full">
+                        
+                        <!-- Header / Timer -->
+                        <div class="flex justify-between items-center mb-6 w-full">
+                            <span class="text-pink-400 font-bold font-display tracking-widest uppercase text-sm">Ai Nhanh Ai Đúng</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-white text-xl">⏳</span>
+                                <span id="quiz-time-text" class="text-white font-bold text-2xl font-mono w-8 text-center">15</span>
+                            </div>
+                            <span class="text-theme-blue font-bold text-sm bg-theme-blue/20 px-3 py-1 rounded-full border border-theme-blue/50">Câu <span id="quiz-current-q">1</span>/4</span>
+                        </div>
+
+                        <!-- Timer Bar -->
+                        <div class="w-full h-2 bg-slate-800 rounded-full mb-8 overflow-hidden">
+                            <div id="quiz-timer-bar" class="h-full bg-theme-orange w-full"></div>
+                        </div>
+
+                        <!-- Question -->
+                        <div class="bg-slate-800/80 backdrop-blur-md p-6 rounded-2xl border border-slate-600 mb-8 text-center shadow-lg min-h-[120px] flex items-center justify-center">
+                            <h2 id="quiz-question" class="text-2xl md:text-3xl font-display font-bold text-white leading-tight">...</h2>
+                        </div>
+
+                        <!-- Answers Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-auto" id="quiz-answers">
+                            <!-- JS injected buttons -->
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- Global State ---
+        let globalScore = 0;
+        let currentPhase = 1;
+        let mistakes = 0;
+        
+        // Phase 1 specific
+        let warmupFlipped = 0;
+        let currentWarmupCard = null;
+        
+        const warmupData = {
+            1: {
+                q: 'Thương của <b class="text-theme-orange">5 : 9</b> là gì?',
+                options: [
+                    { text: 'Phân số 9/5', isCorrect: false, explain: 'Chưa đúng rồi! Số bị chia phải ở trên (tử số), số chia ở dưới (mẫu số).' },
+                    { text: 'Phân số 5/9', isCorrect: true, explain: 'Chính xác! Thương của 5 : 9 được viết thành phân số 5/9.' }
+                ]
+            },
+            2: {
+                q: 'Đâu là <b>phân số thập phân</b>?',
+                options: [
+                    { text: '89/100', isCorrect: true, explain: 'Đúng rồi! Phân số thập phân là phân số có mẫu số là 10, 100, 1000...' },
+                    { text: '100/89', isCorrect: false, explain: 'Sai rồi. Phân số thập phân phải có mẫu số (nằm ở dưới gạch ngang) là 10, 100, 1000...' }
+                ]
+            },
+            3: {
+                q: 'Đâu là <b>phân số thập phân</b>?',
+                options: [
+                    { text: '4/5', isCorrect: false, explain: 'Chưa đúng. Mẫu số ở đây là 5, không phải là 10, 100 hay 1000.' },
+                    { text: '45/10', isCorrect: true, explain: 'Rất tốt! Phân số này có mẫu số là 10 nên được gọi là phân số thập phân.' }
+                ]
+            },
+            4: {
+                q: 'Đổi thành số thập phân: <b class="text-theme-blue">48/100</b>',
+                options: [
+                    { text: '4,8', isCorrect: false, explain: 'Chưa đúng. 48/10 mới bằng 4,8 cơ.' },
+                    { text: '0,48', isCorrect: true, explain: 'Đúng rồi! 48 phần trăm viết dưới dạng số thập phân là 0,48.' }
+                ]
+            }
+        };
+        
+        // Phase 4 specific
+        let tableCorrectCount = 0;
+        
+        // Phase 5 specific
+        let beeMatchedCount = 0;
+        let quizCurrentIndex = 0;
+        let quizTimerInterval = null;
+        let timeLeft = 15;
+        let isQuizActive = false;
+
+        // Data Models
+        const beeData = [
+            { percent: '39%', num: '39', val: 39 },
+            { percent: '41%', num: '41', val: 41 },
+            { percent: '75%', num: '75', val: 75 }
+        ];
+
+        const quizData = [
+            { q: 'Phân số <span class="text-theme-blue font-bold">68/100</span> viết dưới dạng tỉ số phần trăm là:', a: '68%', options: ['6,8%', '68%', '680%', '0,68%'] },
+            { q: 'Lớp 5A có 17 nam, 18 nữ. Tỉ số của số <span class="text-pink-400">nữ</span> và số <span class="text-blue-400">nam</span> là:', a: '18/17', options: ['17/18', '18/17', '18/35', '17/35'] },
+            { q: 'Lớp 5A có 17 nam, 18 nữ. Tỉ số của số <span class="text-blue-400">nam</span> và <span class="text-theme-orange">tổng số</span> là:', a: '17/35', options: ['17/18', '18/35', '17/35', '35/17'] },
+            { q: 'Tỉ số <span class="text-theme-blue font-bold">1/4</span> bằng tỉ số phần trăm nào?', a: '25%', options: ['14%', '20%', '25%', '40%'] }
+        ];
+
+        // --- Core Utilities ---
+        function updateScore(points) {
+            globalScore += points;
+            document.getElementById('score-display').innerText = globalScore;
+            
+            // Score animation
+            const el = document.getElementById('score-display');
+            el.classList.add('scale-150', 'text-green-500');
+            setTimeout(() => el.classList.remove('scale-150', 'text-green-500'), 300);
+        }
+
+        function playSound(type) {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if(!AudioContext) return;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                if (type === 'ting') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
+                    gain.gain.setValueAtTime(1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
+                }
+            } catch(e) {}
+        }
+
+        function showCustomModal(title, message, type = 'info') {
+            const modal = document.getElementById('custom-modal');
+            const iconEl = document.getElementById('modal-icon');
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerHTML = message;
+            
+            if (type === 'success') {
+                iconEl.innerHTML = '✨'; iconEl.className = 'w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl bg-green-100 border-2 border-green-400 text-green-600 shrink-0';
+            } else if (type === 'error') {
+                iconEl.innerHTML = '💡'; iconEl.className = 'w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl bg-amber-100 border-2 border-amber-400 text-amber-600 shrink-0';
+            } else {
+                iconEl.innerHTML = '🤖'; iconEl.className = 'w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl bg-blue-100 border-2 border-blue-400 shrink-0';
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Small delay for CSS transition
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                document.getElementById('modal-content').classList.remove('scale-90');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('custom-modal');
+            modal.classList.add('opacity-0');
+            document.getElementById('modal-content').classList.add('scale-90');
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function nextPhase(phase) {
+            document.querySelectorAll('.phase-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(`phase-${phase}`).classList.add('active');
+            
+            // Update Nav indicators
+            document.querySelectorAll('.nav-step').forEach(el => {
+                const step = parseInt(el.dataset.step) || 5;
+                if (step < phase) {
+                    el.className = 'nav-step flex items-center justify-center w-8 h-8 rounded-full font-bold bg-theme-green text-white shadow ring-2 ring-green-200';
+                    el.innerHTML = '✓';
+                } else if (step === phase) {
+                    el.className = 'nav-step flex items-center justify-center w-8 h-8 rounded-full font-bold bg-theme-blue text-white shadow ring-4 ring-cyan-200';
+                } else if (step > phase) {
+                    el.className = 'nav-step flex items-center justify-center w-8 h-8 rounded-full font-bold bg-slate-200 text-slate-500';
+                    if(step===5) el.innerHTML = '🏆';
+                }
+            });
+
+            currentPhase = phase;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // Di chuyển Bến xe buýt sang Bước 2 để học sinh đếm
+            const busScene = document.getElementById('bus-scene-wrapper');
+            if (busScene && phase === 2) {
+                document.getElementById('content-2a').appendChild(busScene);
+                busScene.classList.remove('flex-grow'); // Bỏ flex-grow để khung không bị giãn quá mức
+                busScene.classList.add('mt-4'); // Thêm khoảng cách với phần trên
+                
+                // Đổi câu thoại của Rô-bốt
+                const chatBubble = document.getElementById('chat-1');
+                if(chatBubble) {
+                    chatBubble.innerHTML = `Hãy đếm số xe, điền số lượng và kéo thả các thẻ số để lập tỉ số nhé!<div class="absolute -bottom-2 right-10 w-4 h-4 bg-white border-b-2 border-r-2 border-theme-blue transform rotate-45"></div>`;
+                }
+            }
+
+            // Triggers
+            if (phase === 2) initPhase2();
+            if (phase === 3) initPhase3();
+            if (phase === 5 && beeMatchedCount === 0) initPhase5BeeGame();
+        }
+
+        // --- Phase 1 Logic ---
+        function openWarmupModal(index, el) {
+            if (el.classList.contains('flipped')) return;
+            currentWarmupCard = { index, el };
+            
+            const data = warmupData[index];
+            document.getElementById('warmup-question').innerHTML = data.q;
+            
+            const optionsContainer = document.getElementById('warmup-options');
+            optionsContainer.innerHTML = '';
+            
+            data.options.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full p-4 rounded-xl border-2 border-slate-200 text-lg font-bold text-slate-700 hover:bg-slate-50 hover:border-theme-blue transition-colors text-center';
+                btn.innerHTML = opt.text;
+                btn.onclick = () => handleWarmupAnswer(btn, opt);
+                optionsContainer.appendChild(btn);
+            });
+
+            document.getElementById('warmup-explanation').classList.add('hidden');
+            document.getElementById('warmup-close-btn').classList.add('hidden');
+            
+            const modal = document.getElementById('warmup-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                document.getElementById('warmup-modal-content').classList.remove('scale-90');
+            }, 10);
+        }
+
+        function handleWarmupAnswer(btn, opt) {
+            const buttons = document.getElementById('warmup-options').querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true); // Disable options temporarily
+            
+            const explanationEl = document.getElementById('warmup-explanation');
+            explanationEl.classList.remove('hidden');
+            explanationEl.innerHTML = opt.explain;
+
+            if (opt.isCorrect) {
+                playSound('ting');
+                btn.classList.replace('border-slate-200', 'border-green-500');
+                btn.classList.replace('hover:border-theme-blue', 'border-green-500');
+                btn.classList.add('bg-green-50', 'text-green-700');
+                explanationEl.classList.add('text-green-600', 'text-base');
+                explanationEl.classList.remove('text-red-500', 'text-slate-700', 'text-sm');
+                
+                // Show "Tiếp tục" button
+                document.getElementById('warmup-close-btn').classList.remove('hidden');
+            } else {
+                playSound('wrong');
+                btn.classList.replace('border-slate-200', 'border-red-500');
+                btn.classList.replace('hover:border-theme-blue', 'border-red-500');
+                btn.classList.add('bg-red-50', 'text-red-700', 'shake');
+                explanationEl.classList.add('text-red-500', 'text-sm');
+                explanationEl.classList.remove('text-green-600', 'text-slate-700', 'text-base');
+                mistakes++;
+                
+                // Reset styling to allow retry
+                setTimeout(() => {
+                    buttons.forEach(b => {
+                         b.disabled = false;
+                         b.className = 'w-full p-4 rounded-xl border-2 border-slate-200 text-lg font-bold text-slate-700 hover:bg-slate-50 hover:border-theme-blue transition-colors text-center';
+                    });
+                    explanationEl.classList.add('hidden');
+                }, 2500);
+            }
+        }
+
+        function closeWarmupModal() {
+            const modal = document.getElementById('warmup-modal');
+            modal.classList.add('opacity-0');
+            document.getElementById('warmup-modal-content').classList.add('scale-90');
+            
+            // Lật thẻ bài trên màn hình chính
+            const cardEl = currentWarmupCard.el;
+            if (!cardEl.classList.contains('flipped')) {
+                cardEl.classList.add('flipped');
+                playSound('ting');
+                warmupFlipped++;
+                updateScore(5);
+                
+                // Nếu lật đủ 4 thẻ thì gọi xe buýt ra
+                if (warmupFlipped === 4) {
+                    setTimeout(triggerBusAnimation, 800);
+                }
+            }
+            
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function createBusSVG(isElectric) {
+            const color = isElectric ? '#0ea5e9' : '#ef4444'; // Sky blue / Red
+            let svg = `<svg viewBox="0 0 100 60" class="w-16 h-12 md:w-20 md:h-16 relative">
+                <!-- Body -->
+                <rect x="5" y="15" width="90" height="35" rx="6" fill="${color}" stroke="#1e293b" stroke-width="2"/>
+                <!-- Windows -->
+                <rect x="15" y="20" width="20" height="15" rx="3" fill="#fff" stroke="#1e293b" stroke-width="1.5"/>
+                <rect x="40" y="20" width="20" height="15" rx="3" fill="#fff" stroke="#1e293b" stroke-width="1.5"/>
+                <rect x="65" y="20" width="20" height="15" rx="3" fill="#fff" stroke="#1e293b" stroke-width="1.5"/>
+                <!-- Wheels -->
+                <circle cx="25" cy="50" r="8" fill="#1e293b"/>
+                <circle cx="25" cy="50" r="4" fill="#94a3b8"/>
+                <circle cx="75" cy="50" r="8" fill="#1e293b"/>
+                <circle cx="75" cy="50" r="4" fill="#94a3b8"/>`;
+            if (isElectric) {
+                svg += `<path d="M 10 30 L 14 30 L 14 25 L 16 35 L 12 35 Z" fill="#facc15"/>`; // Lightning
+            }
+            svg += `</svg>`;
+            return svg;
+        }
+
+        function triggerBusAnimation() {
+            const container = document.getElementById('cars-container');
+            container.innerHTML = '';
+            const order = [true, false, false, true, false, true, false]; // 3 elec, 4 gas mixed
+            
+            order.forEach((isElectric, i) => {
+                const div = document.createElement('div');
+                div.innerHTML = createBusSVG(isElectric);
+                div.children[0].classList.add('bus-drive');
+                div.children[0].style.animationDelay = `${i * 0.4}s`;
+                container.appendChild(div);
+            });
+
+            setTimeout(() => {
+                document.getElementById('robot-1').classList.add('-translate-y-4'); // jump
+                setTimeout(() => document.getElementById('robot-1').classList.remove('-translate-y-4'), 300);
+                document.getElementById('chat-1').classList.remove('opacity-0');
+                document.getElementById('btn-next-1').classList.remove('hidden');
+                playSound('ting');
+            }, (7 * 0.4 + 1.2) * 1000);
+        }
+
+        // --- Phase 2 Logic ---
+        function initPhase2() {
+            // Setup Drag & Drop
+            const draggables = document.querySelectorAll('.drag-item');
+            const dropZones = document.querySelectorAll('.drop-zone');
+
+            // Desktop Drag
+            draggables.forEach(item => {
+                item.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', e.target.id);
+                    setTimeout(() => e.target.classList.add('opacity-50'), 0);
+                });
+                item.addEventListener('dragend', e => e.target.classList.remove('opacity-50'));
+                
+                // Touch logic
+                item.addEventListener('touchstart', handleTouchStart, {passive: false});
+                item.addEventListener('touchmove', handleTouchMove, {passive: false});
+                item.addEventListener('touchend', handleTouchEnd);
+            });
+
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('hovered'); });
+                zone.addEventListener('dragleave', () => zone.classList.remove('hovered'));
+                zone.addEventListener('drop', e => {
+                    e.preventDefault();
+                    zone.classList.remove('hovered');
+                    handleDrop(e.dataTransfer.getData('text/plain'), zone);
+                });
+            });
+
+            // Grid Init
+            const grid = document.getElementById('hundred-grid');
+            grid.innerHTML = '';
+            for(let i=0; i<100; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                grid.appendChild(cell);
+            }
+        }
+
+        function checkBusCount() {
+            const elec = document.getElementById('input-elec').value;
+            const gas = document.getElementById('input-gas').value;
+            
+            if (elec === '3' && gas === '4') {
+                playSound('ting');
+                document.getElementById('input-elec').classList.add('correct');
+                document.getElementById('input-gas').classList.add('correct');
+                document.getElementById('drag-drop-section').classList.remove('hidden');
+                document.getElementById('drag-drop-section').classList.add('flex');
+                updateScore(10);
+            } else {
+                playSound('wrong');
+                mistakes++;
+                showCustomModal('Chưa đúng rồi', 'Hãy đếm lại nhé: Có bao nhiêu xe buýt màu xanh (điện)? Có bao nhiêu xe màu đỏ (xăng)?', 'error');
+                if(elec !== '3') document.getElementById('input-elec').classList.add('incorrect');
+                if(gas !== '4') document.getElementById('input-gas').classList.add('incorrect');
+                setTimeout(() => {
+                    document.getElementById('input-elec').classList.remove('incorrect');
+                    document.getElementById('input-gas').classList.remove('incorrect');
+                }, 400);
+            }
+        }
+
+        // Drag/Drop implementation
+        let activeDragEl = null, initX, initY;
+        function handleTouchStart(e) {
+            activeDragEl = e.target;
+            const touch = e.touches[0];
+            const rect = activeDragEl.getBoundingClientRect();
+            initX = touch.clientX - rect.left;
+            initY = touch.clientY - rect.top;
+            
+            // Move to body for absolute positioning
+            activeDragEl.style.position = 'fixed';
+            activeDragEl.style.zIndex = '1000';
+            document.body.appendChild(activeDragEl);
+            moveElement(touch.clientX, touch.clientY);
+        }
+        function handleTouchMove(e) {
+            if(!activeDragEl) return;
+            e.preventDefault(); // prevent scroll
+            const touch = e.touches[0];
+            moveElement(touch.clientX, touch.clientY);
+        }
+        function moveElement(x, y) {
+            activeDragEl.style.left = (x - initX) + 'px';
+            activeDragEl.style.top = (y - initY) + 'px';
+        }
+        function handleTouchEnd(e) {
+            if(!activeDragEl) return;
+            const touch = e.changedTouches[0];
+            // Hide element temporarily to find element underneath
+            activeDragEl.style.display = 'none';
+            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+            activeDragEl.style.display = 'flex';
+            
+            const zone = dropTarget ? dropTarget.closest('.drop-zone') : null;
+            if (zone) {
+                handleDrop(activeDragEl.id, zone);
+            } else {
+                resetDragItem(activeDragEl);
+            }
+            activeDragEl = null;
+        }
+
+        let p2bDrops = 0;
+        function handleDrop(dragId, zone) {
+            const dragEl = document.getElementById(dragId);
+            if(!dragEl || !zone) return;
+            
+            const val = dragEl.getAttribute('data-val');
+            const expected = zone.getAttribute('data-expected');
+            
+            if (val === expected && !zone.hasChildNodes()) {
+                // Style clean reset
+                dragEl.style.position = 'static';
+                dragEl.style.left = 'auto'; dragEl.style.top = 'auto';
+                
+                // Append
+                zone.appendChild(dragEl);
+                zone.classList.add('filled');
+                dragEl.setAttribute('draggable', 'false');
+                dragEl.classList.remove('drag-item');
+                dragEl.classList.add('w-full', 'h-full', 'flex', 'items-center', 'justify-center', 'text-2xl', 'font-bold', 'text-slate-800', 'bg-transparent', 'shadow-none');
+                
+                playSound('ting');
+                p2bDrops++;
+                updateScore(5);
+                
+                if (p2bDrops === 4) {
+                    showCustomModal('Tuyệt vời!', 'Bạn đã lập đúng các tỉ số. Tỉ số chính là phép chia số lượng đại lượng này cho đại lượng kia.', 'success');
+                    // Unlock Tab 2B
+                    const tab2b = document.getElementById('tab-2b');
+                    tab2b.classList.remove('pointer-events-none', 'opacity-50', 'text-slate-500');
+                    tab2b.classList.add('text-theme-blue');
+                    tab2b.addEventListener('click', switchTab2B);
+                    setTimeout(switchTab2B, 2000);
+                }
+            } else {
+                playSound('wrong');
+                mistakes++;
+                resetDragItem(dragEl);
+                dragEl.classList.add('shake');
+                setTimeout(() => dragEl.classList.remove('shake'), 400);
+            }
+        }
+        function resetDragItem(el) {
+            el.style.position = 'static';
+            el.style.left = 'auto'; el.style.top = 'auto';
+            document.getElementById('drag-items-container').appendChild(el);
+        }
+
+        function switchTab2B() {
+            document.getElementById('tab-2a').className = 'flex-1 py-2 font-bold rounded-lg text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer';
+            document.getElementById('tab-2a').onclick = () => {
+                 document.getElementById('content-2a').style.display = 'flex';
+                 document.getElementById('content-2b').style.display = 'none';
+            };
+            document.getElementById('tab-2b').className = 'flex-1 py-2 font-bold rounded-lg bg-theme-sky text-theme-blue transition-colors';
+            document.getElementById('content-2a').style.display = 'none';
+            document.getElementById('content-2b').style.display = 'flex';
+        }
+
+        function fillGrid(type, count, colorCode) {
+            const cells = document.querySelectorAll('.grid-cell');
+            cells.forEach(c => c.style.backgroundColor = 'white'); // reset
+            
+            // Animate filling
+            for(let i=0; i<count; i++) {
+                setTimeout(() => {
+                    cells[i].style.backgroundColor = colorCode;
+                }, i * 20);
+            }
+            
+            // Update display
+            const numEl = document.getElementById('grid-num');
+            const fracEl = document.getElementById('grid-fraction');
+            
+            numEl.innerText = count;
+            fracEl.style.color = colorCode;
+            
+            playSound('ting');
+            document.getElementById('btn-next-2').classList.remove('hidden');
+        }
+
+        // --- Phase 3 Logic ---
+        function initPhase3() {
+            setTimeout(() => {
+                document.getElementById('knowledge-board').classList.remove('translate-y-10', 'opacity-0');
+            }, 300);
+
+            // Morph animation sequence after reading slightly
+            setTimeout(() => {
+                const num100 = document.getElementById('morph-100');
+                const percent = document.getElementById('morph-percent');
+                const arrow = num100.querySelector('svg');
+                
+                arrow.classList.add('text-theme-orange', 'animate-pulse');
+                
+                setTimeout(() => {
+                    num100.style.opacity = '0.5';
+                    percent.style.transform = 'scale(1)';
+                    playSound('ting');
+                    
+                    setTimeout(() => {
+                        document.getElementById('read-aloud').classList.remove('opacity-0');
+                        document.getElementById('btn-next-3').classList.remove('hidden');
+                    }, 1000);
+                }, 1000);
+                
+            }, 3000);
+        }
+
+        // --- Phase 4 Logic ---
+        document.querySelectorAll('.table-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const val = this.value.trim();
+                const ans = this.getAttribute('data-ans');
+                
+                if (val === ans) {
+                    this.classList.add('correct');
+                    playSound('ting');
+                    
+                    // Check if both row inputs are correct
+                    const row = this.getAttribute('data-row');
+                    const siblings = document.querySelectorAll(`.table-input[data-row="${row}"]`);
+                    if (Array.from(siblings).every(s => s.classList.contains('correct'))) {
+                        tableCorrectCount++;
+                        document.getElementById('p4-b1-score').innerText = tableCorrectCount;
+                        updateScore(10);
+                        
+                        if (tableCorrectCount === 4) {
+                            showCustomModal('Xuất sắc!', 'Bạn đã hiểu cách lập tỉ số từ 2 số rồi đó. Tử số là số thứ nhất, mẫu số là số thứ hai.', 'success');
+                            unlockBai2();
+                        }
+                    }
+                } else {
+                    this.classList.add('incorrect');
+                    this.value = '';
+                    playSound('wrong');
+                    mistakes++;
+                    showCustomModal('Nhầm một chút!', 'Nhớ nhé: Số thứ nhất nằm ở trên (Tử số), số thứ hai nằm ở dưới (Mẫu số).', 'error');
+                    setTimeout(() => this.classList.remove('incorrect'), 400);
+                }
+            });
+        });
+
+        function unlockBai2() {
+            document.getElementById('bai-2-lock').style.display = 'none';
+            document.getElementById('bai-2-container').classList.remove('opacity-50', 'pointer-events-none');
+            
+            // Init Bai 2 logic
+            const totalInput = document.getElementById('tn-total');
+            totalInput.addEventListener('change', function() {
+                if(this.value === '40') {
+                    this.classList.add('border-green-500', 'bg-green-50', 'text-green-700');
+                    this.readOnly = true;
+                    playSound('ting');
+                    document.getElementById('tn-q2-group').classList.remove('opacity-50', 'pointer-events-none');
+                } else {
+                    playSound('wrong'); mistakes++;
+                    this.value = ''; this.classList.add('shake', 'border-red-500');
+                    setTimeout(() => this.classList.remove('shake', 'border-red-500'), 400);
+                }
+            });
+
+            // Generic setup for Q2, Q3, Q4
+            setupFracValidation('tn-n', '23', '17', 'tn-q3-group'); // nữ/nam
+            setupFracValidation('tn-m', '17', '23', 'tn-q4-group'); // nam/nữ
+            setupFracValidation('tn-t', '23', '40', 'btn-next-4', true); // nữ/tổng
+        }
+
+        function setupFracValidation(prefix, expectNum, expectDen, nextTargetId, isLast = false) {
+            const iNum = document.getElementById(`${prefix}-num`);
+            const iDen = document.getElementById(`${prefix}-den`);
+            
+            const check = () => {
+                if (iNum.value === expectNum && iDen.value === expectDen) {
+                    iNum.classList.add('correct'); iDen.classList.add('correct');
+                    playSound('ting'); updateScore(10);
+                    if(isLast) {
+                        document.getElementById(nextTargetId).classList.remove('hidden');
+                    } else {
+                        document.getElementById(nextTargetId).classList.remove('opacity-50', 'pointer-events-none');
+                    }
+                } else if (iNum.value && iDen.value) { // both filled but wrong
+                    playSound('wrong'); mistakes++;
+                    iNum.value = ''; iDen.value = '';
+                    iNum.classList.add('incorrect'); iDen.classList.add('incorrect');
+                    setTimeout(() => { iNum.classList.remove('incorrect'); iDen.classList.remove('incorrect'); }, 400);
+                }
+            };
+            iNum.addEventListener('change', check);
+            iDen.addEventListener('change', check);
+        }
+
+
+        // --- Phase 5 Logic ---
+        function initPhase5BeeGame() {
+            const beeContainer = document.getElementById('bees-container');
+            const flowerContainer = document.getElementById('flowers-container');
+            
+            const shuffledBees = [...beeData].sort(() => Math.random() - 0.5);
+            const shuffledFlowers = [...beeData].sort(() => Math.random() - 0.5);
+
+            const beeSvg = `<svg viewBox="0 0 60 40" class="w-full h-full drop-shadow-md">
+                <ellipse cx="25" cy="20" rx="16" ry="12" fill="#facc15" stroke="#333" stroke-width="1.5"/>
+                <path d="M 15 10 Q 18 20 15 30" stroke="#333" stroke-width="3" fill="none"/>
+                <path d="M 23 8 Q 26 20 23 32" stroke="#333" stroke-width="3" fill="none"/>
+                <path d="M 31 10 Q 34 20 31 30" stroke="#333" stroke-width="3" fill="none"/>
+                <ellipse cx="18" cy="8" rx="8" ry="12" fill="#fff" opacity="0.8" stroke="#333" stroke-width="1" transform="rotate(-30 18 8)"/>
+                <ellipse cx="28" cy="8" rx="8" ry="12" fill="#fff" opacity="0.8" stroke="#333" stroke-width="1" transform="rotate(30 28 8)"/>
+                <circle cx="10" cy="20" r="6" fill="#facc15" stroke="#333" stroke-width="1.5"/>
+                <circle cx="8" cy="18" r="1.5" fill="#000"/>
+                <polygon points="41,20 46,18 46,22" fill="#000"/>
+            </svg>`;
+
+            const flowerSvg = `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                <path d="M 50 40 Q 50 100 40 100" stroke="#22c55e" stroke-width="5" fill="none"/>
+                <path d="M 50 70 Q 70 60 80 80 Q 60 90 50 70" fill="#22c55e"/>
+                <circle cx="50" cy="25" r="14" fill="#f472b6"/>
+                <circle cx="28" cy="42" r="14" fill="#f472b6"/>
+                <circle cx="72" cy="42" r="14" fill="#f472b6"/>
+                <circle cx="36" cy="65" r="14" fill="#f472b6"/>
+                <circle cx="64" cy="65" r="14" fill="#f472b6"/>
+                <circle cx="50" cy="45" r="18" fill="#fef08a" stroke="#eab308" stroke-width="2"/>
+            </svg>`;
+
+            shuffledBees.forEach((b, i) => {
+                const div = document.createElement('div');
+                div.className = 'bee-fly relative w-20 h-16 flex flex-col items-center justify-center cursor-pointer';
+                div.style.animationDelay = `${i * -1.2}s`;
+                div.id = `bee-${b.val}`; div.dataset.val = b.val;
+                div.innerHTML = `${beeSvg}<div class="absolute bg-white border-2 border-orange-500 rounded px-2 py-0.5 text-xs font-bold shadow -mt-12 whitespace-nowrap">${b.percent}</div>`;
+                
+                // Drag logic via touch specifically for games
+                div.addEventListener('touchstart', handleBeeTouchStart, {passive: false});
+                div.addEventListener('touchmove', handleBeeTouchMove, {passive: false});
+                div.addEventListener('touchend', handleBeeTouchEnd);
+                
+                // Standard drag for desktop
+                div.setAttribute('draggable', 'true');
+                div.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', div.id));
+                
+                beeContainer.appendChild(div);
+            });
+
+            shuffledFlowers.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'relative w-24 h-24 flex flex-col items-center justify-center flower-drop-zone';
+                div.dataset.val = f.val;
+                div.innerHTML = `${flowerSvg}<div class="absolute top-7 bg-white/90 rounded-full w-10 h-10 flex flex-col items-center justify-center shadow-sm">
+                    <span class="text-[10px] leading-none border-b border-slate-800 pb-[1px] w-3/4 text-center font-bold text-slate-800">${f.num}</span>
+                    <span class="text-[10px] leading-none pt-[1px] font-bold text-slate-800">100</span>
+                </div>`;
+                
+                div.addEventListener('dragover', e => e.preventDefault());
+                div.addEventListener('drop', e => handleBeeDrop(e.dataTransfer.getData('text/plain'), div));
+                
+                flowerContainer.appendChild(div);
+            });
+        }
+
+        // Custom touch drag for bees (since position fixed is tricky)
+        let activeBee = null, bInitX, bInitY;
+        function handleBeeTouchStart(e) {
+            activeBee = e.currentTarget;
+            activeBee.classList.remove('bee-fly'); // stop animation
+            const touch = e.touches[0];
+            const rect = activeBee.getBoundingClientRect();
+            bInitX = touch.clientX - rect.left;
+            bInitY = touch.clientY - rect.top;
+            
+            activeBee.style.position = 'fixed';
+            activeBee.style.zIndex = '100';
+            document.body.appendChild(activeBee);
+            moveBee(touch.clientX, touch.clientY);
+        }
+        function handleBeeTouchMove(e) {
+            if(!activeBee) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            moveBee(touch.clientX, touch.clientY);
+        }
+        function moveBee(x, y) {
+            activeBee.style.left = (x - bInitX) + 'px';
+            activeBee.style.top = (y - bInitY) + 'px';
+        }
+        function handleBeeTouchEnd(e) {
+            if(!activeBee) return;
+            activeBee.style.display = 'none';
+            const touch = e.changedTouches[0];
+            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+            activeBee.style.display = 'flex';
+            
+            const flower = dropTarget ? dropTarget.closest('.flower-drop-zone') : null;
+            if (flower) {
+                handleBeeDrop(activeBee.id, flower);
+            } else {
+                returnBeeToContainer(activeBee);
+            }
+            activeBee = null;
+        }
+
+        function returnBeeToContainer(bee) {
+            bee.style.position = 'relative';
+            bee.style.left = 'auto'; bee.style.top = 'auto'; bee.style.zIndex = '10';
+            document.getElementById('bees-container').appendChild(bee);
+            bee.classList.add('bee-fly');
+        }
+
+        function handleBeeDrop(beeId, flowerElement) {
+            const bee = document.getElementById(beeId);
+            if(!bee || !flowerElement) return;
+
+            if (bee.dataset.val === flowerElement.dataset.val) {
+                // Match
+                playSound('ting');
+                bee.style.display = 'none';
+                flowerElement.classList.add('flower-matched');
+                
+                // Particle specific to this flower
+                const rect = flowerElement.getBoundingClientRect();
+                confetti({
+                    particleCount: 20, spread: 40,
+                    origin: { x: (rect.left + rect.width/2)/window.innerWidth, y: (rect.top + rect.height/2)/window.innerHeight },
+                    colors: ['#facc15', '#f472b6', '#22c55e'],
+                    zIndex: 100
+                });
+
+                beeMatchedCount++;
+                updateScore(15);
+
+                if (beeMatchedCount === 3) {
+                    setTimeout(() => {
+                        document.getElementById('game-1-container').style.display = 'none';
+                        startQuizGame();
+                    }, 1500);
+                }
+            } else {
+                // Wrong
+                playSound('wrong'); mistakes++;
+                returnBeeToContainer(bee);
+            }
+        }
+
+        // --- QUIZ LOGIC ---
+        function startQuizGame() {
+            document.getElementById('game-2-container').classList.remove('hidden');
+            document.getElementById('game-2-container').classList.add('flex');
+            quizCurrentIndex = 0;
+            loadQuizQuestion();
+        }
+
+        function loadQuizQuestion() {
+            isQuizActive = true;
+            timeLeft = 15;
+            const qData = quizData[quizCurrentIndex];
+            
+            document.getElementById('quiz-current-q').innerText = quizCurrentIndex + 1;
+            document.getElementById('quiz-question').innerHTML = qData.q;
+            document.getElementById('quiz-time-text').innerText = timeLeft;
+            
+            const bar = document.getElementById('quiz-timer-bar');
+            bar.style.transition = 'none';
+            bar.style.width = '100%';
+            
+            const answersContainer = document.getElementById('quiz-answers');
+            answersContainer.innerHTML = '';
+            
+            // Shuffle options
+            const options = [...qData.options].sort(() => Math.random() - 0.5);
+            
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-slate-700 hover:bg-slate-600 text-white font-display font-bold text-lg py-4 rounded-xl border border-slate-500 shadow-md transition-all active:scale-95';
+                btn.innerText = opt;
+                btn.onclick = () => handleQuizAnswer(btn, opt === qData.a);
+                answersContainer.appendChild(btn);
+            });
+
+            // Start timer
+            clearInterval(quizTimerInterval);
+            setTimeout(() => {
+                bar.style.transition = 'width 1s linear';
+                quizTimerInterval = setInterval(() => {
+                    timeLeft--;
+                    document.getElementById('quiz-time-text').innerText = timeLeft;
+                    bar.style.width = `${(timeLeft/15)*100}%`;
+                    
+                    if(timeLeft <= 5) bar.classList.replace('bg-theme-orange', 'bg-red-500');
+                    else bar.classList.replace('bg-red-500', 'bg-theme-orange');
+
+                    if (timeLeft <= 0) {
+                        handleQuizAnswer(null, false, true); // timeout
+                    }
+                }, 1000);
+            }, 50); // slight delay to allow layout calculation
+        }
+
+        function handleQuizAnswer(btnEl, isCorrect, isTimeout = false) {
+            if(!isQuizActive) return;
+            isQuizActive = false;
+            clearInterval(quizTimerInterval);
+            
+            const buttons = document.getElementById('quiz-answers').querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true); // disable all
+
+            if (isCorrect) {
+                playSound('ting');
+                btnEl.classList.replace('bg-slate-700', 'bg-green-500');
+                btnEl.classList.replace('border-slate-500', 'border-green-400');
+                updateScore(15 + timeLeft); // bonus for time
+            } else {
+                playSound('wrong'); mistakes++;
+                if (btnEl) {
+                    btnEl.classList.replace('bg-slate-700', 'bg-red-500');
+                    btnEl.classList.replace('border-slate-500', 'border-red-400');
+                    btnEl.classList.add('shake');
+                }
+                // Highlight correct
+                buttons.forEach(b => {
+                    if (b.innerText === quizData[quizCurrentIndex].a) {
+                        b.classList.replace('bg-slate-700', 'bg-green-500');
+                        b.classList.add('animate-pulse');
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                quizCurrentIndex++;
+                if (quizCurrentIndex < quizData.length) {
+                    loadQuizQuestion();
+                } else {
+                    finishLab();
+                }
+            }, 2000);
+        }
+
+        function finishLab() {
+            // Full screen confetti
+            const duration = 5 * 1000;
+            const end = Date.now() + duration;
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#FF9800', '#00BCD4', '#4CAF50'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#FF9800', '#00BCD4', '#4CAF50'] });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+
+            // Generate Report HTML
+            const reportHtml = `
+                <div class="text-center flex flex-col items-center">
+                    <svg viewBox="0 0 100 100" class="w-24 h-24 mb-4 drop-shadow-xl">
+                        <path d="M 20 20 L 80 20 L 70 50 Q 50 80 50 80 Q 30 80 30 50 Z" fill="#FBBF24" stroke="#D97706" stroke-width="2"/>
+                        <rect x="40" y="80" width="20" height="15" fill="#D97706"/>
+                        <path d="M 20 20 Q 5 20 5 35 Q 5 50 30 50" fill="none" stroke="#FBBF24" stroke-width="4"/>
+                        <path d="M 80 20 Q 95 20 95 35 Q 95 50 70 50" fill="none" stroke="#FBBF24" stroke-width="4"/>
+                        <text x="50" y="45" font-size="20" font-weight="bold" fill="#D97706" text-anchor="middle">%</text>
+                    </svg>
+                    <h2 class="text-3xl font-display font-black text-theme-orange mb-2 uppercase">Vua Tỉ Số!</h2>
+                    <p class="text-slate-600 mb-6 font-medium">Chúc mừng bạn đã hoàn thành xuất sắc Hành Trình Tỉ Số.</p>
+                    
+                    <div class="bg-slate-50 w-full rounded-xl p-4 border grid grid-cols-2 gap-4 text-left shadow-inner mb-4">
+                        <div class="border-r border-slate-200">
+                            <span class="text-slate-500 text-sm block">Tổng Điểm</span>
+                            <span class="text-2xl font-bold text-theme-blue">${globalScore}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 text-sm block">Số lần nhầm</span>
+                            <span class="text-2xl font-bold text-red-500">${mistakes}</span>
+                        </div>
+                    </div>
+                    <button onclick="location.reload()" class="w-full bg-theme-blue text-white py-3 rounded-xl font-bold hover:bg-cyan-600 transition-colors shadow">Chơi lại từ đầu</button>
+                </div>
+            `;
+            
+            // Show via Modal mechanism, but customize it
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+            content.innerHTML = reportHtml;
+            modal.classList.replace('hidden', 'flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-90');
+            }, 10);
+        }
+    </script>
+</body>
+</html>
